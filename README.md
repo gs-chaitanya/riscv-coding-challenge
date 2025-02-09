@@ -8,12 +8,12 @@ The diagrams from the code were generated using [PlantUML](https://plantuml.com/
 Images below for reference
 
 <h3>State Diagram </h3> 
-![state_diagram](https://github.com/gs-chaitanya/riscv-coding-challenge/blob/main/class_diagram.png)
+![state_diagram](state_diagram.png)
 
 
 <h3> Class Diagram </h3> 
-![class_diagram](./class_diagram.png)
+![class_diagram](class_diagram.png)
 
 
 <h3> Sequence Diagram </h3>
-![Sequence_diagram](./sequence_diagram.png)
+![Sequence_diagram](sequence_diagram.png)
