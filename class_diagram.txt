@@ -1,0 +1,141 @@
+@startuml
+enum Suit {
+  HEARTS
+  DIAMONDS
+  CLUBS
+  SPADES
+}
+
+enum Rank {
+  ACE
+  TWO
+  THREE
+  FOUR
+  FIVE
+  SIX
+  SEVEN
+  EIGHT
+  NINE
+  TEN
+  JACK
+  QUEEN
+  KING
+}
+
+abstract class GameState {
+  +isGameOver() : bool
+  +getCurrentPlayer() : string
+}
+
+class GameController {
+  -currentState : GameState
+  -rules : Rules
+  -deck : Deck
+  -tableau : list<Pile>
+  -waste : Pile
+  -foundations : list<Pile>
+  -observers : list<GameObserver>
+  +startGame() : void
+  +processMove(move: Move) : void
+  +flipStock() : void
+  +recycleWaste() : void
+  +checkGameOver() : bool
+  +isGameOver() : bool
+  +undoMove() : void
+  +redoMove() : void
+  +attachObserver(observer : GameObserver) : void
+  +detachObserver(observer : GameObserver) : void
+  +notifyObservers() : void
+}
+
+interface GameObserver {
+  +update() : void
+}
+
+class X11UI implements GameObserver {
+  -displayInfo : X11Display
+  +initUI() : void
+  +refreshDisplay() : void
+  +handleEvent() : void
+  +update() : void
+}
+
+class X11Display {
+  +draw() : void
+}
+
+class Rules {
+  +isValidMove(move : Move, state : GameState) : bool
+}
+
+class Deck {
+  -cards : list<Card>
+  +shuffle() : void
+  +drawCard() : Card
+  +reset() : void
+  +isEmpty() : bool
+}
+
+class Card {
+  -suit : Suit
+  -rank : Rank
+  -faceUp : bool
+  +flip() : void
+}
+
+class Pile {
+  -cards : list<Card>
+  +addCard(card : Card) : void
+  +removeTopCard() : Card
+  +removeSpecificCard(card : Card) : Card
+  +topCard() : Card
+  +isEmpty() : bool
+}
+
+class Move {
+  -sourcePile : Pile
+  -destinationPile : Pile
+  -cardStack : list<Card>
+  +apply() : void
+  +undo() : void
+}
+
+class TestFramework {
+  +runUnitTests() : void
+  +testGameController() : void
+  +testRules() : void
+  +testDeck() : void
+  +testPile() : void
+  +testCard() : void
+}
+
+class VersionControlSystem <<concept>> {
+  +commitChanges() : void
+  +pushChanges() : void
+  +pullChanges() : void
+}
+
+class CICD <<concept>> {
+  +build() : bool
+  +runTests() : bool
+  +deploy() : void
+}
+
+GameController *-- Deck
+GameController *-- "0..*" Pile : Card_Pile
+GameController o-- GameState : currentState
+GameController --> GameObserver : notifies
+Deck *-- "0..*" Card
+Pile *-- "0..*" Card
+Rules --> GameState
+Move --> Pile : uses
+Move --> Card : operates on
+X11UI --> X11Display
+TestFramework --> GameController : tests
+TestFramework --> Rules : tests
+TestFramework --> Deck : tests
+TestFramework --> Pile : tests
+TestFramework --> Card : tests
+VersionControlSystem --> CICD : triggers pipelines
+CICD --> TestFramework : runs tests
+@enduml

@@ -1,0 +1,52 @@
+@startuml
+actor User
+participant "X11UI" as UI
+participant "GameController" as GC
+participant "Deck" as Deck
+participant "Card Pile" as Pile
+participant "Rules" as Rules
+participant "Move" as Move
+participant "Card" as Card
+
+== Game Startup and Dealing ==
+User -> UI: Click "Start Game"
+UI -> GC: startGame()
+activate GC
+GC -> Deck: shuffle()
+loop Deal Cards
+  GC -> Deck: drawCard()
+  Deck --> GC: Card
+  GC -> Pile: addCard(Card)
+end loop
+GC -> GC: Initialize Stock, Waste, and Foundations
+GC -> UI: notifyObservers()
+deactivate GC
+UI -> UI: refreshDisplay()
+
+== Performing a Move ==
+User -> UI: Click to select a card from Pile_A
+UI -> GC: processMove(selectedCard, destinationPile)
+activate GC
+GC -> Move: new Move(sourcePile, destinationPile, cardStack)
+activate Move
+GC -> Rules: isValidMove(Move, currentState)
+activate Rules
+Rules --> GC: true
+deactivate Rules
+alt Valid Move
+  GC -> Move: apply()
+  Move -> Pile: removeSpecificCard(card) or removeTopCard()
+  Pile --> Move: updated source Pile
+  Move -> Pile: addCard(card or cardStack)
+  Pile --> Move: updated destination Pile
+  alt Exposed card needs flipping
+    GC -> Card: flip()
+    Card --> GC: card flipped
+  end alt
+  deactivate Move
+else Invalid Move
+end
+GC -> UI: notifyObservers()
+deactivate GC
+UI -> UI: refreshDisplay()
+@enduml

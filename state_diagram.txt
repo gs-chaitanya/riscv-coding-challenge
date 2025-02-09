@@ -1,0 +1,237 @@
+@startuml
+skinparam style strict
+
+[*] --> DevelopmentCycle : Developer modifies the game code
+[*] --> EnvironmentSetup : User logs in for gameplay over ssh
+
+state DevelopmentCycle {
+  [*] --> Coding : Start new feature/fix
+
+  state "Coding" as Coding {
+  }
+  note right of Coding
+    <b>Coding:</b>
+    Developer edits Solitaire code locally on his machine.
+  end note
+
+  Coding --> GitCommit : commit changes
+
+  state "GitCommit" as GitCommit {
+  }
+  note right of GitCommit
+    <b>GitCommit:</b>
+    Code committed to version control; may trigger CI.
+  end note
+
+  GitCommit --> CICDTest : push triggers build & test
+
+  state "CI/CD Test" as CICDTest {
+  }
+  note right of CICDTest
+    <b>CI/CD Test:</b>
+    Automated tests and build processes validate the code.
+  end note
+
+  CICDTest --> Deployed : tests pass => deploy
+
+  state "Deployed" as Deployed {
+  }
+  note right of Deployed
+    <b>Deployed:</b>
+    Code is deployed on the server for user access.
+  end note
+
+  Deployed --> [*] : dev cycle complete
+}
+note right of DevelopmentCycle
+  <b>DevelopmentCycle:</b>
+  Covers coding, commits, automated testing, and deployment.
+end note
+
+state EnvironmentSetup {
+  [*] --> SSHConnection : "ssh -X/-Y <server>"
+
+  state "SSHConnection" as SSHConnection {
+  }
+  note right of SSHConnection
+    <b>SSHConnection:</b>
+    User initiates an SSH session with X11 forwarding.
+  end note
+
+  SSHConnection --> X11Forwarding : session established
+
+  state "X11Forwarding" as X11Forwarding {
+  }
+  note right of X11Forwarding
+    <b>X11Forwarding:</b>
+    The remote GUI is enabled locally via the forwarded $DISPLAY.
+  end note
+
+  X11Forwarding --> ReadyToStartGame : environment prepared
+}
+note right of EnvironmentSetup
+  <b>EnvironmentSetup:</b>
+  Once logged in with proper X11 forwarding, the user can launch Solitaire.
+end note
+
+EnvironmentSetup --> StartUp : run "solitaire" executable
+
+state "StartUp" as StartUp {
+}
+note right of StartUp
+  <b>StartUp:</b>
+  Solitaire initializes: Game assets are loaded, GameController is initalized and then the UI observer is attached (X11) to receive UI updates from the GameController
+  The user can now start playing
+end note
+
+StartUp --> WaitingForNewGame : app loaded / GC->UI: notifyObservers()
+
+state "WaitingForNewGame" as WaitingForNewGame {
+}
+note right of WaitingForNewGame
+  <b>WaitingForNewGame:</b>
+  Displays main menu options: Two options are presented to the user at this stage, kept it simple for now
+  Start new game or Exit application
+end note
+
+WaitingForNewGame --> Dealing : startGame() invoked / GC->UI: notifyObservers()
+
+state "Dealing" as Dealing {
+}
+note right of Dealing
+  <b>Dealing:</b>
+  GameController performs startGame():
+    The following actions are performed
+    - Shuffles the Deck
+    - Deals 7 Card (Tableau) piles
+    - Initializes Stock, Waste, and Foundations
+    - Notifies UI observers after dealing
+end note
+
+Dealing --> InPlay : dealing complete / GC->UI: notifyObservers()
+
+state "InPlay" as InPlay {
+  [*] --> Idle
+
+  state "Idle" as Idle {
+  }
+  note right of Idle
+    <b>Idle:</b>
+    Waiting for user action:
+      - Flip the Stock card
+      - Recycle the Waste pile
+      - Select a card (or stack) from Tableau or Waste
+      - Request game-over check
+  end note
+
+  Idle --> SelectingCard : user selects a card / GC->UI: notifyObservers()
+
+  state "SelectingCard" as SelectingCard {
+  }
+  note right of SelectingCard
+    <b>SelectingCard:</b>
+    The user picks a face-up card or a stack from Tableau/Waste.
+  end note
+
+  SelectingCard --> CheckingMove : destination chosen / GC->UI: notifyObservers()
+
+  state "CheckingMove" as CheckingMove {
+  }
+  note right of CheckingMove
+    <b>CheckingMove:</b>
+    Validate move using Rules.isValidMove(move, currentState).
+    (The move is represented by a Move object that can be applied/undone.)
+  end note
+
+  CheckingMove --> MoveValid : valid move / GC->UI: notifyObservers()
+  CheckingMove --> MoveInvalid : invalid move / GC->UI: notifyObservers()
+
+  state "MoveValid" as MoveValid {
+  }
+  note right of MoveValid
+    <b>MoveValid:</b>
+    Move passes rules.
+    Ready to apply the move via Move.apply().
+  end note
+
+  MoveValid --> PerformingMove : apply move / GC->UI: notifyObservers()
+
+  state "PerformingMove" as PerformingMove {
+  }
+  note right of PerformingMove
+    <b>PerformingMove:</b>
+    GameController executes the move:
+      - Calls Move.apply() to update the Piles.
+      - Flips any newly exposed face-down card.
+      - Notifies UI observers after move execution.
+  end note
+
+  PerformingMove --> Idle : move completed / GC->UI: notifyObservers()
+
+  state "MoveInvalid" as MoveInvalid {
+  }
+  note right of MoveInvalid
+    <b>MoveInvalid:</b>
+    The attempted move does not meet rules.
+    Reverts selection and returns to Idle.
+  end note
+
+  MoveInvalid --> Idle : revert selection / GC->UI: notifyObservers()
+
+  Idle --> FlipStock : user clicks on Stock / GC->UI: notifyObservers()
+
+  state "FlipStock" as FlipStock {
+  }
+  note right of FlipStock
+    <b>FlipStock:</b>
+    The top card of the Stock is flipped face-up onto the Waste.
+  end note
+
+  FlipStock --> Idle : card flipped / GC->UI: notifyObservers()
+
+  Idle --> RecycleWaste : user clicks on empty Stock / GC->UI: notifyObservers()
+
+  state "RecycleWaste" as RecycleWaste {
+  }
+  note right of RecycleWaste
+    <b>RecycleWaste:</b>
+    If permitted, recycles the Waste pile into a new Stock.
+  end note
+
+  RecycleWaste --> Idle : stock refreshed / GC->UI: notifyObservers()
+
+  Idle --> CheckingGameOver : no moves/foundations complete / GC->UI: notifyObservers()
+
+  state "CheckingGameOver" as CheckingGameOver {
+  }
+  note right of CheckingGameOver
+    <b>CheckingGameOver:</b>
+    Evaluates game status:
+      - Win if all Foundations complete (Ace to King)
+      - Lose if no valid moves remain and redeals exhausted
+  end note
+
+  CheckingGameOver --> GameOver : game over detected / GC->UI: notifyObservers()
+  CheckingGameOver --> Idle : game continues / GC->UI: notifyObservers()
+}
+note right of InPlay
+  <b>InPlay:</b>
+  The main gameplay loop: selecting, validating, and executing moves,
+  with periodic checks for game-over conditions.
+end note
+
+InPlay --> GameOver : isGameOver() true
+
+state "GameOver" as GameOver {
+}
+note right of GameOver
+  <b>GameOver:</b>
+  The game has ended:
+    - Victory: All Foundations are complete.
+    - Defeat: No valid moves remain.
+  The user may choose to restart (back to WaitingForNewGame) or exit.
+end note
+
+GameOver --> [*] : user restarts/exits
+
+@enduml
